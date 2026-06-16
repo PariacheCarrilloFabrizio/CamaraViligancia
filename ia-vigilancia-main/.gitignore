@@ -1,0 +1,36 @@
+.env
+__pycache__/
+*.pyc
+*.pyo
+*.log
+.pytest_cache/
+.ruff_cache/
+.cache/
+
+# Python environments
+venv/
+.venv/
+env/
+
+# Runtime evidence and generated assets
+evidence/
+runs/
+videos/
+test_outputs/
+
+# Model weights should be downloaded or stored with Git LFS, not normal Git.
+*.pt
+*.onnx
+*.engine
+
+# IDE files
+.idea/
+.vscode/
+
+# Next.js / Bun dashboard
+dashboard/node_modules/
+dashboard/.next/
+dashboard/out/
+dashboard/.env.local
+dashboard/dev-server.log
+dashboard/dev-server.err.log

@@ -1,0 +1,30 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f4f2ec;
+  --foreground: #151917;
+  --panel: #fffdf7;
+  --ink-muted: #65706b;
+  --danger: #c7352c;
+  --warning: #b98214;
+  --success: #28775d;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background:
+    radial-gradient(circle at top left, rgba(40, 119, 93, 0.16), transparent 32rem),
+    linear-gradient(135deg, #f4f2ec 0%, #ede8dc 48%, #f8f5ec 100%);
+  color: var(--foreground);
+  font-family: "Aptos", "Segoe UI", sans-serif;
+}
+
+button,
+input,
+select {
+  font: inherit;
+}

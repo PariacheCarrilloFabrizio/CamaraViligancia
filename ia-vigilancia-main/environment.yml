@@ -1,0 +1,11 @@
+name: ia-vigilancia
+dependencies:
+  - python=3.10
+  - pip
+  - pip:
+      - opencv-python
+      - python-dotenv
+      - ultralytics
+      - fastapi
+      - uvicorn[standard]
+      - dill

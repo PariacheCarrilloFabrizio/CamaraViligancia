@@ -1,0 +1,9 @@
+venv/
+__pycache__/
+*.pt
+*.mp4
+*.jpg
+*.png
+test_outputs/
+evidences/
+.env

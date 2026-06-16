@@ -1,0 +1,28 @@
+{
+  "name": "ia-vigilancia-dashboard",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "bun node_modules/next/dist/bin/next dev --webpack",
+    "build": "bun node_modules/next/dist/bin/next build --webpack",
+    "start": "bun node_modules/next/dist/bin/next start",
+    "lint": "bun node_modules/eslint/bin/eslint.js"
+  },
+  "dependencies": {
+    "lucide-react": "^1.17.0",
+    "next": "latest",
+    "react": "latest",
+    "react-dom": "latest"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "latest",
+    "@types/node": "latest",
+    "@types/react": "latest",
+    "@types/react-dom": "latest",
+    "eslint": "latest",
+    "eslint-config-next": "latest",
+    "postcss": "latest",
+    "tailwindcss": "latest",
+    "typescript": "latest"
+  }
+}
