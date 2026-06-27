@@ -73,10 +73,11 @@ class YOLODetector:
 
         if fight_model_path:
             path = Path(fight_model_path)
-            if path.exists():
+            if path.exists() and path.stat().st_size > 1000:
                 self.fight_model = YOLO(str(path))
             else:
-                print(f"Aviso: no se encontro el modelo de peleas en {fight_model_path}. Se usara solo YOLO base.")
+                print("[WARN] Modelo de peleas no disponible, función desactivada.")
+                self.fight_model = None
 
     def detect(self, frame: cv2.typing.MatLike) -> DetectionSummary:
         results = self.model.predict(

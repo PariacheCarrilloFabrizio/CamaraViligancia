@@ -1,18 +1,20 @@
 from __future__ import annotations
 
+import os
+os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
+
 import json
 import threading
 import time
-import os
 from collections import deque
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 import uuid
 import concurrent.futures
-from ultralytics import YOLO 
 
 import cv2
+from ultralytics import YOLO 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
@@ -27,8 +29,8 @@ from detector import YOLODetector
 from event_engine import EventEngine, EventRecord
 
 # --- CONFIGURACIÓN DE SUPABASE ---
-SUPABASE_URL = "https://mwdpanztvxlkefxnpoox.supabase.co"
-SUPABASE_KEY = "AQUI_PEGA_TU_LLAVE"
+SUPABASE_URL = "URL1"
+SUPABASE_KEY = "KEY1"
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 # ---------------------------------
@@ -56,18 +58,25 @@ class CameraRuntime:
             cooldown_seconds=settings.evidence_cooldown_seconds,
             enabled=settings.save_evidence,
         )
-        
-        self.smoking_model = YOLO("models/smoking/best.pt")
-        
-        self.events: deque[dict[str, Any]] = deque(maxlen=30) 
-        
+
+        smoking_path = Path("models/smoking/best.pt")
+        if smoking_path.exists() and smoking_path.stat().st_size > 1000:
+            print("[INFO] Cargando modelo antitabaco...")
+            self.smoking_model = YOLO(str(smoking_path))
+            self.smoking_model.to("cpu")
+        else:
+            print("[WARN] Modelo de fumar no disponible, función desactivada.")
+            self.smoking_model = None
+
+        self.events: deque[dict[str, Any]] = deque(maxlen=30)
+
         self.latest_frame: bytes | None = None
         self.latest_fps = 0.0
         self.running = False
         self.error: str | None = None
         self.lock = threading.Lock()
         self.thread: threading.Thread | None = None
-        
+
         self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
         self.is_detecting = False
 
@@ -97,28 +106,28 @@ class CameraRuntime:
     def _ai_task(self, frame_copy: cv2.typing.MatLike) -> None:
         """Tarea pesada de YOLO aislada del video en vivo"""
         try:
+            # 1. Analizar Peleas y Caídas
             summary = self.detector.detect(frame_copy)
             detected_events = self.event_engine.analyze(frame_copy, summary)
             if detected_events:
                 self._record_events(frame_copy, detected_events)
-                
-            smoking_results = self.smoking_model(frame_copy, conf=0.45, verbose=False)[0]
-            
-            for box in smoking_results.boxes:
-                cls_id = int(box.cls[0])
-                label = smoking_results.names[cls_id]
-                
-                # OJO: Cambia "smoking" por el nombre exacto que le diste a la etiqueta en Roboflow si es distinto
-                if label == "smoking" or label == "fumar":
-                    smoking_event = EventRecord(
-                        code="infraction_smoking",
-                        title="Infracción: Persona fumando",
-                        priority="media",
-                        detail="Se detectó el uso de cigarrillos en zona no autorizada."
-                    )
-                    self._record_events(frame_copy, [smoking_event])
-                    break # Salimos del bucle para no lanzar 100 alertas de la misma persona
-                    
+
+            # 2. Analizar Personas Fumando
+            if self.smoking_model is not None:
+                smoking_results = self.smoking_model(frame_copy, conf=0.45, verbose=False)[0]
+                for box in smoking_results.boxes:
+                    cls_id = int(box.cls[0])
+                    label = smoking_results.names[cls_id]
+                    if label in ("smoking", "fumar", "cigarettes", "cigarette", "smoke"):
+                        smoking_event = EventRecord(
+                            code="infraction_smoking",
+                            title="Infracción: Persona fumando",
+                            priority="media",
+                            detail="Se detectó el uso de cigarrillos en zona no autorizada."
+                        )
+                        self._record_events(frame_copy, [smoking_event])
+                        break
+
         except Exception as e:
             print(f"[ERROR IA]: Falló el procesamiento: {e}")
         finally:
@@ -149,7 +158,7 @@ class CameraRuntime:
                     self.executor.submit(self._ai_task, frame.copy())
 
                 encoded_frame = self._encode_frame(frame)
-                
+
                 fps_frames += 1
                 now = time.perf_counter()
                 if now - last_fps_at >= 1:
@@ -170,7 +179,7 @@ class CameraRuntime:
     def _record_events(self, frame: cv2.typing.MatLike, events: list[EventRecord]) -> None:
         for event in events:
             saved_path = self.evidence_manager.save_event_evidence(frame, event)
-            
+
             web_path = None
             if saved_path:
                 filename = Path(saved_path).name
@@ -184,7 +193,7 @@ class CameraRuntime:
                     "detail": event.detail,
                     "evidence_path": web_path
                 }).execute()
-                print(f"[SUPABASE] Alerta '{event.title}' guardada en la base de datos.")
+                print(f"[SUPABASE] Alerta '{event.title}' guardada exitosamente.")
             except Exception as e:
                 print(f"[SUPABASE ERROR] No se pudo guardar en DB: {e}")
 
@@ -250,7 +259,7 @@ app.mount("/evidences", StaticFiles(directory=settings.evidence_dir), name="evid
 
 @app.on_event("startup")
 def start_camera() -> None:
-    runtime.settings.camera_source = "0" 
+    runtime.settings.camera_source = "0"
     runtime.start()
 
 @app.get("/api/health")
